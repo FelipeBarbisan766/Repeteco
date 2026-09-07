@@ -14,15 +14,27 @@ class CircularBufferManager(
     private val maxSegments: Int
         get() = windowDurationSeconds / segmentDurationSeconds
 
+    @Synchronized
     fun addSegment(segment: File) {
         segments.addLast(segment)
-        // TODO: if segments.size > maxSegments, remove + delete oldest
+        while (segments.size > maxSegments) {
+            val oldest = segments.removeFirst()
+            deleteSafely(oldest)
+        }
     }
 
+    @Synchronized
     fun getCurrentSegments(): List<File> = segments.toList()
 
+    @Synchronized
     fun clear() {
-        // TODO: delete all files safely
+        segments.forEach { deleteSafely(it) }
         segments.clear()
+    }
+
+    private fun deleteSafely(file: File) {
+        if (file.exists() && !file.delete()) {
+            file.deleteOnExit()
+        }
     }
 }
